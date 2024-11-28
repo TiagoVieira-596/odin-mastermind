@@ -1,32 +1,56 @@
 module Cpu
   class CpuOpponent
-    @@possible_colors = %w[red blue yellow green cyan magenta].map do |color|
+    @@possible_colors = %w[red blue yellow green cyan magenta]
+    @@repeated_colors = %w[red blue yellow green cyan magenta].map do |color|
       Array.new(4, color)
     end
-    attr_reader :plays
+
+    attr_reader :plays, :generated_code
 
     def self.possible_colors
-      @@possible_colors.flatten.uniq
+      @@possible_colors
+    end
+
+    def self.repeated_colors
+      @@repeated_colors
     end
 
     def initialize
-      @generated_code = CpuOpponent.possible_colors.flatten.sample(4)
+      @generated_code = CpuOpponent.repeated_colors.flatten.sample(4)
       @plays = 0
     end
 
-    def check_code(player_code)
-      player_code_correctness = { player_code[0] => 'wrong', player_code[1] => 'wrong', player_code[2] => 'wrong',
-                                  player_code[3] => 'wrong' }
-      return 'won' if player_code == @generated_code
+    def play
+      @plays += 1
+    end
+
+    def check_code(player_code, secret_code = @generated_code)
+      player_code_correctness = {}.compare_by_identity
+      return 'won' if player_code == secret_code
 
       player_code.each_with_index do |color, color_index|
-        @generated_code.each_with_index do |entry, entry_index|
-          player_code_correctness[color] = 'correct' if color == entry && color_index == entry_index
-          player_code_correctness[color] = 'misplaced' if color == entry && color_index != entry_index
+        secret_code.each_with_index do |entry, entry_index|
+          unless secret_code.include?(color)
+            player_code_correctness[color] = 'wrong'
+            break
+          end
+          if color == entry && color_index == entry_index
+
+            player_code_correctness[color] = 'correct'
+            break
+          end
+          next unless color == entry && color_index != entry_index
+
+          player_code_correctness[color] = 'misplaced'
+          player_code_correctness.each_pair do |key, value|
+            if (key == entry || key == color) && value == 'misplaced' && color_index != entry_index
+              player_code_correctness[color] = 'wrong'
+            end
+          end
         end
       end
-      @plays += 1
-      player_code_correctness
+      p player_code
+      p player_code_correctness
     end
   end
 
@@ -34,13 +58,21 @@ module Cpu
     def initialize(secret_code)
       @plays = 0
       @generated_code = secret_code
+      @all_possible_codes = Cpu::CpuPlayer.possible_colors.repeated_permutation(4).to_a
     end
 
     def take_guess(correct_guesses = 0, misplaced_guesses = 0, previous_guess = [])
-      possible_correct = previous_guess.slice([0, 1, 2].sample, correct_guesses)
-      possible_misplaced = previous_guess.sample(misplaced_guesses)
-      random_missing_colors = CpuPlayer.possible_colors.flatten.sample(4 - misplaced_guesses - correct_guesses)
-      random_missing_colors.push(possible_correct, possible_misplaced).flatten.filter { |entry| !entry.nil? }
+      return %w[red red blue blue] if previous_guess == []
+
+      @all_possible_codes.delete_if do |entry|
+        possible_code_correctness = check_code(entry, previous_guess)
+        if possible_code_correctness == 'won' ||
+           (possible_code_correctness.values.count('correct') == correct_guesses &&
+           possible_code_correctness.values.count('misplaced') == misplaced_guesses)
+          entry
+        end
+      end
+      @all_possible_codes.first
     end
   end
 end

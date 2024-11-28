@@ -6,19 +6,19 @@ cpu_player = nil
 while cpu_player.nil?
   print 'Play against the cpu? '
   game_mode = gets.chomp.downcase
-  if %w[no n].include?(game_mode)
-    cpu_player = false
-  elsif %w[yes y].include?(game_mode)
-    cpu_player = true
-  else
-    break
-  end
+  cpu_player = if %w[no n].include?(game_mode)
+                 false
+               elsif %w[yes y].include?(game_mode)
+                 true
+               end
 end
 if cpu_player == false
   cpu = Cpu::CpuOpponent.new
   until game_won == true || cpu.plays >= 12
     user_code = get_valid_code.map(&:downcase)
+    p cpu.generated_code
     current_guess_correctness = cpu.check_code(user_code)
+    cpu.play
     if current_guess_correctness == 'won'
       game_won = true
       break
@@ -61,7 +61,8 @@ else
       correct_guesses = gets.chomp.to_i
     end
     new_cpu_guess = cpu.take_guess(correct_guesses, misplaced_guesses, current_cpu_guess)
+    cpu.play
   end
   puts 'The computer won the game!!!' if game_won == true
-  puts 'The computer ran out of guesses' if game_won == false
+  puts 'The computer ran out of guesses.' if game_won == false
 end
