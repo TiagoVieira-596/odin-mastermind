@@ -28,24 +28,32 @@ module Cpu
       player_code_correctness = {}.compare_by_identity
       return 'won' if player_code == secret_code
 
-      player_code.each_with_index do |color, color_index|
-        secret_code.each_with_index do |entry, entry_index|
-          unless secret_code.include?(color)
-            player_code_correctness[color] = 'wrong'
-            break
-          end
-          if color == entry && color_index == entry_index
-
-            player_code_correctness[color] = 'correct'
-            break
-          end
-          next unless color == entry && color_index != entry_index
-
-          player_code_correctness[color] = 'misplaced'
-          player_code_correctness.each_pair do |key, value|
-            if (key == entry || key == color) && value == 'misplaced' && color_index != entry_index
+      until player_code_correctness.keys.length == 4
+        player_code.each_with_index do |color, color_index|
+          secret_code.each_with_index do |entry, entry_index|
+            unless secret_code.include?(color)
               player_code_correctness[color] = 'wrong'
+              break
             end
+            if color == entry && color_index == entry_index
+
+              player_code_correctness[color] = 'correct'
+              break
+            end
+
+            player_code_correctness.each_pair do |key, value|
+              next unless key == color && value == 'misplaced' &&
+                          secret_code.count(color) < player_code_correctness.keys.count(color) &&
+                          secret_code.count(color) != (player_code.count(color))
+
+              player_code_correctness[key] = 'wrong'
+            end
+            player_code_correctness[color] = 'misplaced'
+            next unless secret_code.count(color) <
+                        player_code_correctness.to_a.count([color, 'misplaced']) +
+                        player_code_correctness.to_a.count([color, 'correct'])
+
+            player_code_correctness[color] = 'wrong'
           end
         end
       end
