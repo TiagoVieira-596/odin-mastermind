@@ -16,15 +16,14 @@ if cpu_player == false
   cpu = Cpu::CpuOpponent.new
   until game_won == true || cpu.plays >= 12
     user_code = get_valid_code.map(&:downcase)
-    p cpu.generated_code
     current_guess_correctness = cpu.check_code(user_code)
     cpu.play
     if current_guess_correctness == 'won'
       game_won = true
       break
     else
-      correct_guesses = current_guess_correctness.values.count('correct')
-      misplaced_guesses = current_guess_correctness.values.count('misplaced')
+      correct_guesses = current_guess_correctness['correct'].length
+      misplaced_guesses = current_guess_correctness['misplaced'].length
       user_code.each do |color|
         print color.colorize(color.to_sym) << ' '
       end
@@ -41,15 +40,15 @@ else
   new_cpu_guess = cpu.take_guess
   until game_won == true || cpu.plays >= 12
     current_cpu_guess = new_cpu_guess
+    if current_cpu_guess.nil?
+      puts "You've tricked me!!! >:("
+      return
+    end
     print 'Cpu guessed: '
     current_cpu_guess.each do |color|
       print color.colorize(color.to_sym) << ' '
     end
     puts "\n"
-    if cpu.check_code(current_cpu_guess) == 'won'
-      game_won = true
-      break
-    end
     misplaced_guesses = nil
     correct_guesses = nil
     until ((misplaced_guesses.is_a? Numeric) && misplaced_guesses >= 0 && misplaced_guesses <= 4) &&
@@ -60,7 +59,11 @@ else
       print 'How many correct guesses: '
       correct_guesses = gets.chomp.to_i
     end
-    new_cpu_guess = cpu.take_guess(correct_guesses, misplaced_guesses, current_cpu_guess)
+    if correct_guesses == 4
+      game_won = true
+      break
+    end
+    new_cpu_guess = cpu.take_guess(current_cpu_guess, correct_guesses, misplaced_guesses)
     cpu.play
   end
   puts 'The computer won the game!!!' if game_won == true
